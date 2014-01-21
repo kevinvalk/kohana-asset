@@ -17,3 +17,4 @@ function vendorLoad($class, $file, $ext)
 
 // Load extra classes
 vendorLoad('lessc', 'lessc.inc', 'php');
+//vendorLoad('Closure', 'closure.inc', 'php'); TODO: Use GCC
