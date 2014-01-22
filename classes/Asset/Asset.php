@@ -365,18 +365,31 @@ class Asset_Asset
 				strripos($url, '.less') !== strlen($url) - 5
 				)
 			{
-				$info = pathinfo($url);
+
+				// Check if we have to remove an url part
+				$s_ = ($s = strpos($url, '?')) === false ? PHP_MAXPATHLEN : $s;
+				$s__ = ($s = strpos($url, '#')) === false ? PHP_MAXPATHLEN : $s;
+				$delim = ($s_ === PHP_MAXPATHLEN && $s__ === PHP_MAXPATHLEN) ? null : ($s_ > $s__ ? '#' : '?');
+
+				// Remove it if needed
+				if ($delim !== null)
+				{
+					$s = explode($delim, $url, 2);
+					$file = $s[0];
+					$argument = $delim.$s[1];
+				}
+				else
+				{
+					$file = $url;
+					$argument = '';
+				}
+				
+				// Grab info
+				$info = pathinfo($file);
 
 				// Set url info to nothing
 				if ( ! array_key_exists('extension', $info))
 					$info['extension'] = '';
-
-				$info['raw_extension'] = $info['extension'];
-				// Remove url stuff from extension
-				if (strpos($info['extension'], '?') !== false)
-					$info['extension'] = current(explode('?', $info['extension']));
-				if (strpos($info['extension'], '#') !== false)
-					$info['extension'] = current(explode('#', $info['extension']));
 
 				// Find the file where we think it is. Css is base (so .. is application/module/etc)
 				if (strpos($info['dirname'], '..'.DIRECTORY_SEPARATOR) === 0)
@@ -407,15 +420,17 @@ class Asset_Asset
 				// Find the file in the Kohana structure
 				// NOTE: What to do with duplicates?? Just pick first one (see cascade file system)
 				$absolutePath = Kohana::find_file($top, $filename, $info['extension']);
+				
 				if ( ! $absolutePath)
 				{
-					Kohana::$log->add(Log::ERROR, tr('[LESSC] Was not able to find url file: :file in top directory: :top', [':file' => $filename.$info['extension'], ':top' => $top]));
+					echo Debug::vars(tr('[LESSC] Was not able to find url file: :file in top directory: :top', [':file' => $filename.'.'.$info['extension'], ':top' => $top]));
+					Kohana::$log->add(Log::ERROR, tr('[LESSC] Was not able to find url file: :file in top directory: :top', [':file' => $filename.'.'.$info['extension'], ':top' => $top]));
 					return;
 				}
 
 				// Symlink it to the asset directory and build an URL for it
 				$urlBasePath = $top.DIRECTORY_SEPARATOR;
-				$urlPath = self::DIRECTORY_ASSET.DIRECTORY_SEPARATOR.$urlBasePath.$info['filename'].'.'.$info['raw_extension'];
+				$urlPath = self::DIRECTORY_ASSET.DIRECTORY_SEPARATOR.$urlBasePath.$info['filename'].'.'.$info['extension'];
 				$filePath = $urlBasePath.$info['filename'].'.'.$info['extension'];
 				$urlParts = explode(DIRECTORY_SEPARATOR, $urlBasePath);
 				array_pop($urlParts); // Pop the file from the path
