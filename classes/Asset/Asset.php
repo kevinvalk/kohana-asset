@@ -6,6 +6,7 @@ class Asset_Asset
 	const DIRECTORY_ASSET = 'assets';
 	const DIRECTORY_CSS = 'css';
 	const DIRECTORY_JS = 'js';
+	const DIRECTORY_IMAGE = 'images';
 
 	const EXT_CSS = 'css';
 	const EXT_JS = 'js';
@@ -89,6 +90,61 @@ class Asset_Asset
 			return 1;
 		else
 			return 0;
+	}
+
+	public function image($file)
+	{
+		// If its something absolute just return it
+		if (strpos($file, '://') !== false)
+			return $file;
+
+		// TODO: Caching do not find files so much
+
+		// Find it and symlink it
+		$info = pathinfo($file);
+
+		// Set url info to nothing
+		if ( ! array_key_exists('extension', $info))
+			throw new Kohana_Exception(tr('Image withouth an extension: :file!', [':file' => $file]));
+
+		// Figure out top directory, and file + directory
+		$directories = explode(DIRECTORY_SEPARATOR, $file);
+		array_pop($directories); // remove the file
+
+		// If there is no directory search in images
+		if (count($directories) <= 0)
+		{
+			$top = self::DIRECTORY_IMAGE;
+			$filename = $info['filename'];
+		}
+		else
+		{
+			$top = array_shift($directories);
+			$filename = implode(DIRECTORY_SEPARATOR, $directories).$info['filename'];
+		}
+
+		// Find the file in the Kohana structure
+		$absoluteFile = Kohana::find_file($top, $filename, $info['extension']);
+		if ( ! $absoluteFile)
+			throw new Kohana_Exception(tr('Was not able to find file: :file in top directory: :top', [':file' => $filename.'.'.$info['extension'], ':top' => $top]));
+
+		// Mirror structure in asset dir
+		array_unshift($directories, $top);
+		$path = '';
+		foreach ($directories as $dir)
+		{
+			$path .= $dir;
+			if ( ! is_dir($this->assetPath.$path))
+				mkdir($this->assetPath.$path, self::CHMOD);
+			$path .= DIRECTORY_SEPARATOR;
+		}
+		$path .= $info['basename'];
+
+		// Make symlink
+		if ( ! file_exists($this->assetPath.$path))
+			symlink($absoluteFile, $this->assetPath.$path);
+
+		return URL::site(self::DIRECTORY_ASSET.DIRECTORY_SEPARATOR.$path, true);
 	}
 
 	public function getHtmlStyleSheet()
