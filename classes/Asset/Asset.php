@@ -52,7 +52,7 @@ class Asset_Asset
 		$name = 'tti_'.md5(json_encode(func_get_args())).'.png';
 		$path = $this->assetPath.self::DIRECTORY_IMAGE.DIRECTORY_SEPARATOR.$name;
 		
-		if ( ! file_exists($path) || true)
+		if ( ! file_exists($path))
 		{
 			// Find the font
 			$font = Kohana::find_file('fonts', $font.$fontType, 'ttf');
