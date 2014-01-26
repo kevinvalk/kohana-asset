@@ -10,6 +10,7 @@ class Asset_Asset
 
 	const EXT_CSS = 'css';
 	const EXT_JS = 'js';
+	const GD_DPI = 96;
 
 	const CHMOD = 0750;
 
@@ -34,10 +35,57 @@ class Asset_Asset
 		$this->assetPath = DOCROOT.$directory.DIRECTORY_SEPARATOR;
 
 		// If the directory does not exists create it (recursively)
-		if ( ! is_dir($this->assetPath))
+		$this->makePath($this->assetPath);
+		$this->makePath($this->assetPath.self::DIRECTORY_IMAGE);
+	}
+
+	private function makePath($path, $recursive = true)
+	{
+		if ( ! is_dir($this->assetPath.self::DIRECTORY_IMAGE))
+			return mkdir($this->assetPath.self::DIRECTORY_IMAGE, self::CHMOD, $recursive);
+		return true;
+	}
+
+	public function getTextImage($text, $font, $fontSize, $fontColor, $fontType = '')
+	{
+		// Path
+		$name = 'tti_'.md5(json_encode(func_get_args())).'.png';
+		$path = $this->assetPath.self::DIRECTORY_IMAGE.DIRECTORY_SEPARATOR.$name;
+		
+		if ( ! file_exists($path) || true)
 		{
-			mkdir($this->assetPath, self::CHMOD, true);
+			// Find the font
+			$font = Kohana::find_file('fonts', $font.$fontType, 'ttf');
+			$fontPoint = $fontSize * (72 / self::GD_DPI);
+
+			// Calculate width/height
+			$box = imagettfbbox($fontPoint, 0, $font, $text);
+			$ascent = abs($box[7]);
+			$descent = abs($box[1]);
+			$width = abs($box[0]) + abs($box[2]);
+			$height = $ascent + $descent;
+
+			// Create the image
+			$img = imagecreatetruecolor($width, $height);
+
+			// Make it transparent
+			imagesavealpha($img, true);
+			$transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
+			imagefill($img, 0, 0, $transparent);
+
+			// We accept only hex colors
+			$color = hexdec($fontColor);
+			$color = imagecolorallocate($img, 0xFF & ($color >> 0x10), 0xFF & ($color >> 0x8), 0xFF & $color);
+
+			// Build image
+			imagettftext($img, $fontPoint, 0, 0, $ascent, $color, $font, $text);
+
+			// Save the image
+			imagepng($img, $path);
+			imagedestroy($img);
 		}
+
+		return URL::site(self::DIRECTORY_ASSET.DIRECTORY_SEPARATOR.self::DIRECTORY_IMAGE.DIRECTORY_SEPARATOR.$name, true);
 	}
 
 	public function addStyleSheet($file, $priority = null)
