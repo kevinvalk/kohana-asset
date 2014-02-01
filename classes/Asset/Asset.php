@@ -299,6 +299,12 @@ class Asset_Asset
 			$content .= file_get_contents($file)."\n"; // Just to be sure add an extra newline
 		}
 
+		// Minify?
+		if (Kohana::$environment != Kohana::DEVELOPMENT)
+		{
+			$content = JSMinPlus::minify($content, $outputFile);
+		}
+
 		// Save it
 		return file_put_contents($outputFile, $content);
 	}
